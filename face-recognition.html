@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Alexa por Expressão Facial</title>
+    
+    <!-- Face-api.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #videoElement {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .camera-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .camera-selector select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin-left: 10px;
+            min-width: 200px;
+        }
+
+        .camera-selector select option {
+            background: #333;
+            color: white;
+        }
+
+        .camera-info {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .status.loading {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+        }
+
+        .expression-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .commands-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .command-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .command-item:last-child {
+            border-bottom: none;
+        }
+
+        .emotion {
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ffcdd2;
+            border-left: 4px solid #f44336;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #c8e6c9;
+            border-left: 4px solid #4caf50;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🤖 Controle Alexa por Expressão</h1>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+        </div>
+
+        <div class="camera-selector">
+            <label for="cameraSelect">📷 Câmera:</label>
+            <select id="cameraSelect">
+                <option value="">Carregando câmeras...</option>
+            </select>
+            <div class="camera-info" id="cameraInfo">
+                Configuração salva automaticamente
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">📹 Iniciar Câmera</button>
+            <button id="stopBtn" disabled>⏹️ Parar</button>
+            <button id="calibrateBtn" disabled>🎯 Calibrar</button>
+        </div>
+
+        <div class="status">
+            <div>Status: <span id="statusText">Aguardando...</span></div>
+            <div style="margin-top: 10px;">
+                Expressão Detectada: <span id="expressionText" class="expression-display">Nenhuma</span>
+            </div>
+        </div>
+
+        <div class="commands-list">
+            <h3>📋 Comandos Configurados</h3>
+            <div class="command-item">
+                <span class="emotion">😊 Sorriso</span>
+                <span>▶️ "Alexa, tocar música"</span>
+            </div>
+            <div class="command-item">
+                <span class="emotion">😮 Surpresa</span>
+                <span>⏸️ "Alexa, pausar"</span>
+            </div>
+            <div class="command-item">
+                <span class="emotion">😤 Raiva</span>
+                <span>🔇 "Alexa, parar música"</span>
+            </div>
+            <div class="command-item">
+                <span class="emotion">😢 Tristeza</span>
+                <span>💡 "Alexa, diminuir luzes"</span>
+            </div>
+            <div class="command-item">
+                <span class="emotion">😐 Neutro</span>
+                <span>💡 "Alexa, acender luzes"</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detecção real de expressões faciais com Face-api.js
+        class FacialExpressionDetector {
+            constructor() {
+                this.video = document.getElementById('videoElement');
+                this.canvas = document.getElementById('overlay');
+                this.ctx = this.canvas.getContext('2d');
+                this.cameraSelect = document.getElementById('cameraSelect');
+                this.isRunning = false;
+                this.currentExpression = 'neutro';
+                this.lastCommand = null;
+                this.commandCooldown = 3000; // 3 segundos entre comandos
+                this.modelsLoaded = false;
+                this.detectionInterval = null;
+                this.availableCameras = [];
+                this.selectedCameraId = null;
+
+                this.expressions = {
+                    'happy': 'Alexa, tocar música',
+                    'surprised': 'Alexa, pausar',
+                    'angry': 'Alexa, parar música',
+                    'sad': 'Alexa, diminuir luzes',
+                    'neutral': 'Alexa, acender luzes'
+                };
+
+                this.expressionNames = {
+                    'happy': 'sorriso',
+                    'surprised': 'surpresa',
+                    'angry': 'raiva',
+                    'sad': 'tristeza',
+                    'neutral': 'neutro'
+                };
+
+                this.setupEventListeners();
+                this.loadCameras();
+                this.loadModels();
+            }
+
+            async loadCameras() {
+                try {
+                    // Solicita permissão para câmeras para listar dispositivos
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                    
+                    // Lista todos os dispositivos de vídeo
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    this.availableCameras = devices.filter(device => device.kind === 'videoinput');
+                    
+                    // Carrega câmera salva do localStorage
+                    const savedCameraId = localStorage.getItem('selectedCameraId');
+                    
+                    // Popula o seletor
+                    this.cameraSelect.innerHTML = '';
+                    
+                    if (this.availableCameras.length === 0) {
+                        this.cameraSelect.innerHTML = '<option value="">Nenhuma câmera encontrada</option>';
+                        document.getElementById('cameraInfo').textContent = 'Nenhuma câmera disponível';
+                        return;
+                    }
+                    
+                    this.availableCameras.forEach((camera, index) => {
+                        const option = document.createElement('option');
+                        option.value = camera.deviceId;
+                        
+                        // Nome mais descritivo para as câmeras
+                        let cameraName = camera.label || `Câmera ${index + 1}`;
+                        if (cameraName.includes('front') || cameraName.includes('user')) {
+                            cameraName += ' (Frontal)';
+                        } else if (cameraName.includes('back') || cameraName.includes('environment')) {
+                            cameraName += ' (Traseira)';
+                        }
+                        
+                        option.textContent = cameraName;
+                        
+                        // Seleciona a câmera salva ou a primeira disponível
+                        if (savedCameraId === camera.deviceId || (!savedCameraId && index === 0)) {
+                            option.selected = true;
+                            this.selectedCameraId = camera.deviceId;
+                        }
+                        
+                        this.cameraSelect.appendChild(option);
+                    });
+                    
+                    // Atualiza informações
+                    const cameraInfo = document.getElementById('cameraInfo');
+                    cameraInfo.textContent = `${this.availableCameras.length} câmera(s) disponível(is) • Configuração salva automaticamente`;
+                    
+                    console.log(`${this.availableCameras.length} câmera(s) encontrada(s)`);
+                    
+                } catch (error) {
+                    console.error('Erro ao carregar câmeras:', error);
+                    this.cameraSelect.innerHTML = '<option value="">Erro ao carregar câmeras</option>';
+                    document.getElementById('cameraInfo').textContent = 'Erro: Permissão de câmera necessária';
+                }
+            }            async loadModels() {
+                try {
+                    this.updateStatus('Carregando modelos de IA...', true);
+                    
+                    // Carrega os modelos necessários do Face-api.js
+                    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
+                    
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                    ]);
+
+                    this.modelsLoaded = true;
+                    this.updateStatus('✅ Modelos carregados! Pronto para começar', false, false, true);
+                    
+                    setTimeout(() => {
+                        this.updateStatus('Pronto para começar');
+                    }, 2000);
+
+                } catch (error) {
+                    this.updateStatus('❌ Erro ao carregar modelos: ' + error.message, false, true);
+                    console.error('Erro ao carregar modelos:', error);
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopCamera());
+                document.getElementById('calibrateBtn').addEventListener('click', () => this.calibrate());
+                
+                // Event listener para mudança de câmera
+                this.cameraSelect.addEventListener('change', (event) => {
+                    this.selectedCameraId = event.target.value;
+                    // Salva no localStorage
+                    localStorage.setItem('selectedCameraId', this.selectedCameraId);
+                    
+                    // Mostra feedback de câmera selecionada
+                    const selectedOption = event.target.selectedOptions[0];
+                    const cameraInfo = document.getElementById('cameraInfo');
+                    cameraInfo.textContent = `✅ ${selectedOption.textContent} selecionada`;
+                    
+                    // Volta ao texto normal após 3 segundos
+                    setTimeout(() => {
+                        cameraInfo.textContent = `${this.availableCameras.length} câmera(s) disponível(is) • Configuração salva automaticamente`;
+                    }, 3000);
+                    
+                    // Se a câmera estiver rodando, reinicia com nova câmera
+                    if (this.isRunning) {
+                        this.updateStatus('Trocando câmera...', true);
+                        this.stopCamera();
+                        setTimeout(() => this.startCamera(), 500);
+                    }
+                });
+            }
+
+            async startCamera() {
+                if (!this.modelsLoaded) {
+                    this.updateStatus('Aguarde os modelos carregarem...', false, true);
+                    return;
+                }
+
+                try {
+                    this.updateStatus('Iniciando câmera...', true);
+
+                    // Configuração da câmera
+                    const constraints = {
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    };
+
+                    // Se uma câmera específica foi selecionada, usa seu deviceId
+                    if (this.selectedCameraId) {
+                        constraints.video.deviceId = { exact: this.selectedCameraId };
+                        delete constraints.video.facingMode; // Remove facingMode quando usar deviceId específico
+                    }
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                    this.video.srcObject = stream;
+                    this.video.onloadedmetadata = () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        this.startDetection(); // Inicia detecção após vídeo carregado
+                    };
+
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('calibrateBtn').disabled = false;
+
+                    this.isRunning = true;
+                    this.updateStatus('Câmera ativa - Detectando expressões');
+
+                } catch (error) {
+                    this.updateStatus('Erro ao acessar câmera: ' + error.message, false, true);
+                    console.error('Erro detalhado da câmera:', error);
+                }
+            }
+
+            stopCamera() {
+                this.isRunning = false;
+
+                // Para o intervalo de detecção
+                if (this.detectionInterval) {
+                    clearInterval(this.detectionInterval);
+                    this.detectionInterval = null;
+                }
+
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+
+                // Limpa o canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('calibrateBtn').disabled = true;
+
+                this.updateStatus('Câmera desligada');
+                document.getElementById('expressionText').textContent = 'Nenhuma';
+            }
+
+            async startDetection() {
+                if (!this.isRunning || !this.modelsLoaded) return;
+
+                // Detecção real usando Face-api.js
+                this.detectionInterval = setInterval(async () => {
+                    if (!this.isRunning) return;
+
+                    try {
+                        // Detecta faces e expressões
+                        const detections = await faceapi
+                            .detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions())
+                            .withFaceLandmarks()
+                            .withFaceExpressions();
+
+                        // Limpa canvas
+                        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                        if (detections && detections.length > 0) {
+                            const detection = detections[0];
+                            
+                            // Desenha retângulo da face detectada
+                            this.drawFaceDetection(detection.detection.box);
+                            
+                            // Processa expressões
+                            this.processRealExpression(detection.expressions);
+                        } else {
+                            // Se não detectar face, mostra neutro
+                            document.getElementById('expressionText').textContent = '😐 Neutro (Nenhuma face)';
+                        }
+
+                    } catch (error) {
+                        console.error('Erro na detecção:', error);
+                    }
+                }, 100); // Detecção a cada 100ms
+            }
+
+            processRealExpression(expressions) {
+                // Encontra a expressão com maior confiança
+                let maxExpression = 'neutral';
+                let maxConfidence = 0;
+
+                for (const [expression, confidence] of Object.entries(expressions)) {
+                    if (confidence > maxConfidence && confidence > 0.3) { // Threshold mínimo
+                        maxConfidence = confidence;
+                        maxExpression = expression;
+                    }
+                }
+
+                // Converte para nome em português
+                const expressionPt = this.expressionNames[maxExpression] || 'neutro';
+                this.currentExpression = expressionPt;
+                
+                // Atualiza display
+                document.getElementById('expressionText').textContent = 
+                    `${this.getExpressionEmoji(expressionPt)} (${Math.round(maxConfidence * 100)}%)`;
+
+                // Verifica cooldown para enviar comando
+                const now = Date.now();
+                if (maxConfidence > 0.6 && // Confiança alta
+                    (!this.lastCommand || (now - this.lastCommand) > this.commandCooldown)) {
+                    this.sendAlexaCommand(maxExpression);
+                    this.lastCommand = now;
+                }
+            }
+
+            processExpression(expression) {
+                this.currentExpression = expression;
+                document.getElementById('expressionText').textContent = this.getExpressionEmoji(expression);
+
+                // Verifica cooldown para evitar comandos repetidos
+                const now = Date.now();
+                if (!this.lastCommand || (now - this.lastCommand) > this.commandCooldown) {
+                    this.sendAlexaCommand(expression);
+                    this.lastCommand = now;
+                }
+            }
+
+            getExpressionEmoji(expression) {
+                const emojis = {
+                    'sorriso': '😊 Sorriso',
+                    'surpresa': '😮 Surpresa',
+                    'raiva': '😤 Raiva',
+                    'tristeza': '😢 Tristeza',
+                    'neutro': '😐 Neutro',
+                    'happy': '😊 Sorriso',
+                    'surprised': '😮 Surpresa',
+                    'angry': '😤 Raiva',
+                    'sad': '😢 Tristeza',
+                    'neutral': '😐 Neutro'
+                };
+                return emojis[expression] || '😐 Neutro';
+            }
+
+            async sendAlexaCommand(expression) {
+                const command = this.expressions[expression];
+
+                try {
+                    this.updateStatus(`Enviando comando: "${command}"`, true);
+
+                    // Simula envio do comando para Alexa
+                    await this.simulateAlexaRequest(command);
+
+                    this.updateStatus(`✅ Comando enviado: "${command}"`, false, false, true);
+
+                    // Volta ao status normal após 2 segundos
+                    setTimeout(() => {
+                        if (this.isRunning) {
+                            this.updateStatus('Detectando expressões...');
+                        }
+                    }, 2000);
+
+                } catch (error) {
+                    this.updateStatus('❌ Erro ao enviar comando: ' + error.message, false, true);
+                }
+            }
+
+            async simulateAlexaRequest(command) {
+                // Simula tempo de resposta da API
+                await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+
+                // Simula possível erro de rede (5% chance)
+                if (Math.random() < 0.05) {
+                    throw new Error('Falha na conexão com Alexa');
+                }
+
+                console.log('Comando simulado enviado para Alexa:', command);
+            }
+
+            drawFaceDetection(faceBox) {
+                if (!faceBox) {
+                    // Se não há face detectada, desenha área de busca
+                    this.ctx.strokeStyle = '#ff6b6b';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.strokeRect(
+                        this.canvas.width * 0.25,
+                        this.canvas.height * 0.15,
+                        this.canvas.width * 0.5,
+                        this.canvas.height * 0.7
+                    );
+                    
+                    this.ctx.fillStyle = '#ff6b6b';
+                    this.ctx.font = '18px Arial';
+                    this.ctx.fillText(
+                        'Posicione seu rosto aqui',
+                        this.canvas.width * 0.25,
+                        this.canvas.height * 0.12
+                    );
+                    return;
+                }
+
+                // Desenha retângulo ao redor da face detectada
+                this.ctx.strokeStyle = '#00ff00';
+                this.ctx.lineWidth = 3;
+                this.ctx.setLineDash([]); // Remove linha pontilhada
+                this.ctx.strokeRect(faceBox.x, faceBox.y, faceBox.width, faceBox.height);
+
+                // Adiciona texto da expressão atual
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.font = '20px Arial';
+                this.ctx.fillText(
+                    this.getExpressionEmoji(this.currentExpression),
+                    faceBox.x,
+                    faceBox.y - 10
+                );
+
+                // Adiciona indicador de confiança
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(
+                    'Face detectada',
+                    faceBox.x,
+                    faceBox.y + faceBox.height + 20
+                );
+            }
+
+            calibrate() {
+                this.updateStatus('Calibrando... Faça uma expressão neutra por 3 segundos', true);
+                
+                // Durante calibração, captura dados da expressão neutra para ajuste
+                let neutralSamples = [];
+                const calibrationStart = Date.now();
+                
+                const calibrationInterval = setInterval(async () => {
+                    if (!this.isRunning) {
+                        clearInterval(calibrationInterval);
+                        return;
+                    }
+                    
+                    try {
+                        const detections = await faceapi
+                            .detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions())
+                            .withFaceExpressions();
+                            
+                        if (detections && detections.length > 0) {
+                            neutralSamples.push(detections[0].expressions);
+                        }
+                    } catch (error) {
+                        console.error('Erro na calibração:', error);
+                    }
+                    
+                    if (Date.now() - calibrationStart >= 3000) {
+                        clearInterval(calibrationInterval);
+                        this.updateStatus('✅ Calibração concluída!', false, false, true);
+                        console.log('Amostras de calibração coletadas:', neutralSamples.length);
+                        
+                        setTimeout(() => {
+                            if (this.isRunning) {
+                                this.updateStatus('Detectando expressões...');
+                            }
+                        }, 2000);
+                    }
+                }, 200);
+            }
+
+            updateStatus(text, loading = false, error = false, success = false) {
+                const statusElement = document.getElementById('statusText');
+                const statusContainer = statusElement.parentElement.parentElement;
+
+                // Remove classes anteriores
+                statusContainer.classList.remove('error', 'success', 'loading');
+
+                if (error) {
+                    statusContainer.classList.add('error');
+                } else if (success) {
+                    statusContainer.classList.add('success');
+                } else if (loading) {
+                    statusContainer.classList.add('loading');
+                }
+
+                statusElement.innerHTML = loading ?
+                    `<span class="loading"></span> ${text}` : text;
+            }
+        }
+
+        // Inicializa o detector quando a página carrega
+        document.addEventListener('DOMContentLoaded', () => {
+            new FacialExpressionDetector();
+        });
+
+        // Registra Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(console.error);
+        }
+    </script>
+</body>
+
+</html>
