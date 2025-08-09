@@ -168,16 +168,23 @@
             color: #ffeb3b;
         }
 
-        .loading {
+        /* Spinner isolado para não afetar o texto */
+        .spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            vertical-align: middle;
-            margin-right: 8px;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .status-text-wrapper {
+            /* wrapper do texto + spinner */
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         @keyframes spin {
@@ -375,7 +382,9 @@
                     this.cameraSelect.innerHTML = '<option value="">Erro ao carregar câmeras</option>';
                     document.getElementById('cameraInfo').textContent = 'Erro: Permissão de câmera necessária';
                 }
-            } async loadModels() {
+            }
+
+            async loadModels() {
                 try {
                     this.updateStatus('Carregando modelos de IA...', true);
 
@@ -737,11 +746,21 @@
                     statusContainer.classList.add('loading');
                 }
 
-                // Atualiza o conteúdo de forma que apenas o spinner gire
+                // Limpa conteúdo anterior
+                while (statusElement.firstChild) statusElement.removeChild(statusElement.firstChild);
+
                 if (loading) {
-                    statusElement.innerHTML = `<span class="loading"></span><span>${text}</span>`;
+                    const wrapper = document.createElement('span');
+                    wrapper.className = 'status-text-wrapper';
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner';
+                    const label = document.createElement('span');
+                    label.textContent = text;
+                    wrapper.appendChild(spinner);
+                    wrapper.appendChild(label);
+                    statusElement.appendChild(wrapper);
                 } else {
-                    statusElement.innerHTML = text;
+                    statusElement.textContent = text;
                 }
             }
         }
