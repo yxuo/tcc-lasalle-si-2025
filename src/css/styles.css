@@ -15,10 +15,35 @@ body {
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 30px;
-    max-width: 800px;
-    width: 100%;
+    max-width: 1400px;
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
     border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Layout responsivo com Grid */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .main-content {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 h1 {
@@ -32,8 +57,18 @@ h1 {
     position: relative;
     border-radius: 15px;
     overflow: hidden;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (min-width: 1024px) {
+    .video-container {
+        margin-bottom: 0;
+        max-width: none;
+    }
 }
 
 #videoElement {
@@ -54,9 +89,21 @@ h1 {
 .controls {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
     flex-wrap: wrap;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+}
+
+@media (min-width: 1024px) {
+    .controls {
+        margin-bottom: 0;
+        gap: 10px;
+    }
+
+    .controls button {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
 }
 
 .camera-selector {
@@ -121,6 +168,14 @@ button:disabled {
     transition: all .3s ease;
 }
 
+@media (min-width: 1024px) {
+    .status {
+        margin-bottom: 0;
+        font-size: 16px;
+        padding: 16px;
+    }
+}
+
 .status.loading {
     background: rgba(33, 150, 243, 0.2);
     border-left: 4px solid #2196f3;
@@ -137,7 +192,24 @@ button:disabled {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     padding: 20px;
-    margin-top: 20px;
+    margin-top: 0;
+}
+
+@media (min-width: 1024px) {
+    .commands-list {
+        padding: 16px;
+    }
+
+    .commands-list h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+    }
+
+    .command-item {
+        padding: 8px 0;
+        font-size: 14px;
+    }
 }
 
 .command-item {
@@ -192,10 +264,9 @@ button:disabled {
     border-left: 4px solid #4caf50;
 }
 
-@media (max-width:600px) {
+@media (max-width: 600px) {
     .container {
-        padding: 20px;
-        margin: 10px;
+        /*  */
     }
 
     h1 {
@@ -209,5 +280,25 @@ button:disabled {
 
     button {
         width: 200px;
+    }
+
+    .camera-selector select {
+        min-width: 180px;
+    }
+}
+
+/* Melhorias para tablets */
+@media (min-width: 601px) and (max-width: 1023px) {
+    .container {
+        padding: 30px;
+        width: calc(100% - 60px);
+    }
+
+    h1 {
+        font-size: 2.2em;
+    }
+
+    .video-container {
+        max-width: 500px;
     }
 }

@@ -16,35 +16,48 @@
 <body>
     <div class="container">
         <h1>🤖 Controle Alexa por Expressão</h1>
-        <div class="video-container">
-            <video id="videoElement" autoplay muted playsinline></video>
-            <canvas id="overlay"></canvas>
-        </div>
-        <div class="camera-selector">
-            <label for="cameraSelect">📷 Câmera:</label>
-            <select id="cameraSelect">
-                <option value="">Carregando câmeras...</option>
-            </select>
-            <div class="camera-info" id="cameraInfo">Configuração salva automaticamente</div>
-        </div>
-        <div class="controls">
-            <button id="startBtn">📹 Iniciar Câmera</button>
-            <button id="stopBtn" disabled>⏹️ Parar</button>
-            <button id="calibrateBtn" disabled>🎯 Calibrar</button>
-        </div>
-        <div class="status">
-            <div>Status: <span id="statusText">Aguardando...</span></div>
-            <div style="margin-top:10px;">Expressão Detectada: <span id="expressionText"
-                    class="expression-display">Nenhuma</span></div>
-        </div>
-        <div class="commands-list">
-            <h3>📋 Comandos Configurados</h3>
-            <div class="command-item"><span class="emotion">😊 Sorriso</span><span>▶️ "Alexa, tocar música"</span></div>
-            <div class="command-item"><span class="emotion">😮 Surpresa</span><span>⏸️ "Alexa, pausar"</span></div>
-            <div class="command-item"><span class="emotion">😤 Raiva</span><span>🔇 "Alexa, parar música"</span></div>
-            <div class="command-item"><span class="emotion">😢 Tristeza</span><span>💡 "Alexa, diminuir luzes"</span>
+
+        <div class="main-content">
+            <div class="left-column">
+                <div class="video-container">
+                    <video id="videoElement" autoplay muted playsinline></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+                <div class="camera-selector">
+                    <label for="cameraSelect">📷 Câmera:</label>
+                    <select id="cameraSelect">
+                        <option value="">Carregando câmeras...</option>
+                    </select>
+                    <div class="camera-info" id="cameraInfo">Configuração salva automaticamente</div>
+                </div>
+                <div class="controls">
+                    <button id="startBtn">📹 Iniciar Câmera</button>
+                    <button id="stopBtn" disabled>⏹️ Parar</button>
+                    <button id="calibrateBtn" disabled>🎯 Calibrar</button>
+                </div>
             </div>
-            <div class="command-item"><span class="emotion">😐 Neutro</span><span>💡 "Alexa, acender luzes"</span></div>
+
+            <div class="right-column">
+                <div class="status">
+                    <div>Status: <span id="statusText">Aguardando...</span></div>
+                    <div style="margin-top:10px;">Expressão Detectada: <span id="expressionText"
+                            class="expression-display">Nenhuma</span></div>
+                </div>
+                <div class="commands-list">
+                    <h3>📋 Comandos Configurados</h3>
+                    <div class="command-item"><span class="emotion">😊 Sorriso</span><span>▶️ "Alexa, tocar
+                            música"</span></div>
+                    <div class="command-item"><span class="emotion">😮 Surpresa</span><span>⏸️ "Alexa, pausar"</span>
+                    </div>
+                    <div class="command-item"><span class="emotion">😤 Raiva</span><span>🔇 "Alexa, parar música"</span>
+                    </div>
+                    <div class="command-item"><span class="emotion">😢 Tristeza</span><span>💡 "Alexa, diminuir
+                            luzes"</span>
+                    </div>
+                    <div class="command-item"><span class="emotion">😐 Neutro</span><span>💡 "Alexa, acender
+                            luzes"</span></div>
+                </div>
+            </div>
         </div>
     </div>
     <script src="./js/app.js"></script>
