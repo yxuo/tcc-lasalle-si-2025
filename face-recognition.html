@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Alexa por Expressão Facial</title>
-    
+
     <!-- Face-api.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js"></script>
     <style>
@@ -176,6 +176,8 @@
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
         }
 
         @keyframes spin {
@@ -317,27 +319,27 @@
                 try {
                     // Solicita permissão para câmeras para listar dispositivos
                     await navigator.mediaDevices.getUserMedia({ video: true });
-                    
+
                     // Lista todos os dispositivos de vídeo
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     this.availableCameras = devices.filter(device => device.kind === 'videoinput');
-                    
+
                     // Carrega câmera salva do localStorage
                     const savedCameraId = localStorage.getItem('selectedCameraId');
-                    
+
                     // Popula o seletor
                     this.cameraSelect.innerHTML = '';
-                    
+
                     if (this.availableCameras.length === 0) {
                         this.cameraSelect.innerHTML = '<option value="">Nenhuma câmera encontrada</option>';
                         document.getElementById('cameraInfo').textContent = 'Nenhuma câmera disponível';
                         return;
                     }
-                    
+
                     this.availableCameras.forEach((camera, index) => {
                         const option = document.createElement('option');
                         option.value = camera.deviceId;
-                        
+
                         // Nome mais descritivo para as câmeras
                         let cameraName = camera.label || `Câmera ${index + 1}`;
                         if (cameraName.includes('front') || cameraName.includes('user')) {
@@ -345,36 +347,41 @@
                         } else if (cameraName.includes('back') || cameraName.includes('environment')) {
                             cameraName += ' (Traseira)';
                         }
-                        
+
                         option.textContent = cameraName;
-                        
+
                         // Seleciona a câmera salva ou a primeira disponível
                         if (savedCameraId === camera.deviceId || (!savedCameraId && index === 0)) {
                             option.selected = true;
                             this.selectedCameraId = camera.deviceId;
                         }
-                        
+
                         this.cameraSelect.appendChild(option);
                     });
-                    
+
                     // Atualiza informações
                     const cameraInfo = document.getElementById('cameraInfo');
-                    cameraInfo.textContent = `${this.availableCameras.length} câmera(s) disponível(is) • Configuração salva automaticamente`;
-                    
+                    const hasManyCameras = this.availableCameras.length > 1;
+                    if (hasManyCameras) {
+                        cameraInfo.textContent = `${this.availableCameras.length} câmeras disponíveis • Configuração salva automaticamente`;
+                    } else {
+                        cameraInfo.textContent = `${this.availableCameras.length} câmera disponível • Configuração salva automaticamente`;
+                    }
+
                     console.log(`${this.availableCameras.length} câmera(s) encontrada(s)`);
-                    
+
                 } catch (error) {
                     console.error('Erro ao carregar câmeras:', error);
                     this.cameraSelect.innerHTML = '<option value="">Erro ao carregar câmeras</option>';
                     document.getElementById('cameraInfo').textContent = 'Erro: Permissão de câmera necessária';
                 }
-            }            async loadModels() {
+            } async loadModels() {
                 try {
                     this.updateStatus('Carregando modelos de IA...', true);
-                    
+
                     // Carrega os modelos necessários do Face-api.js
                     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
-                    
+
                     await Promise.all([
                         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -383,7 +390,7 @@
 
                     this.modelsLoaded = true;
                     this.updateStatus('✅ Modelos carregados! Pronto para começar', false, false, true);
-                    
+
                     setTimeout(() => {
                         this.updateStatus('Pronto para começar');
                     }, 2000);
@@ -398,23 +405,28 @@
                 document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
                 document.getElementById('stopBtn').addEventListener('click', () => this.stopCamera());
                 document.getElementById('calibrateBtn').addEventListener('click', () => this.calibrate());
-                
+
                 // Event listener para mudança de câmera
                 this.cameraSelect.addEventListener('change', (event) => {
                     this.selectedCameraId = event.target.value;
                     // Salva no localStorage
                     localStorage.setItem('selectedCameraId', this.selectedCameraId);
-                    
+
                     // Mostra feedback de câmera selecionada
                     const selectedOption = event.target.selectedOptions[0];
                     const cameraInfo = document.getElementById('cameraInfo');
                     cameraInfo.textContent = `✅ ${selectedOption.textContent} selecionada`;
-                    
+
                     // Volta ao texto normal após 3 segundos
                     setTimeout(() => {
-                        cameraInfo.textContent = `${this.availableCameras.length} câmera(s) disponível(is) • Configuração salva automaticamente`;
+                        const hasManyCameras = this.availableCameras.length > 1;
+                        if (hasManyCameras) {
+                            cameraInfo.textContent = `${this.availableCameras.length} câmeras disponíveis • Configuração salva automaticamente`;
+                        } else {
+                            cameraInfo.textContent = `${this.availableCameras.length} câmera disponível • Configuração salva automaticamente`;
+                        }
                     }, 3000);
-                    
+
                     // Se a câmera estiver rodando, reinicia com nova câmera
                     if (this.isRunning) {
                         this.updateStatus('Trocando câmera...', true);
@@ -514,10 +526,10 @@
 
                         if (detections && detections.length > 0) {
                             const detection = detections[0];
-                            
+
                             // Desenha retângulo da face detectada
                             this.drawFaceDetection(detection.detection.box);
-                            
+
                             // Processa expressões
                             this.processRealExpression(detection.expressions);
                         } else {
@@ -546,9 +558,9 @@
                 // Converte para nome em português
                 const expressionPt = this.expressionNames[maxExpression] || 'neutro';
                 this.currentExpression = expressionPt;
-                
+
                 // Atualiza display
-                document.getElementById('expressionText').textContent = 
+                document.getElementById('expressionText').textContent =
                     `${this.getExpressionEmoji(expressionPt)} (${Math.round(maxConfidence * 100)}%)`;
 
                 // Verifica cooldown para enviar comando
@@ -635,7 +647,7 @@
                         this.canvas.width * 0.5,
                         this.canvas.height * 0.7
                     );
-                    
+
                     this.ctx.fillStyle = '#ff6b6b';
                     this.ctx.font = '18px Arial';
                     this.ctx.fillText(
@@ -673,34 +685,34 @@
 
             calibrate() {
                 this.updateStatus('Calibrando... Faça uma expressão neutra por 3 segundos', true);
-                
+
                 // Durante calibração, captura dados da expressão neutra para ajuste
                 let neutralSamples = [];
                 const calibrationStart = Date.now();
-                
+
                 const calibrationInterval = setInterval(async () => {
                     if (!this.isRunning) {
                         clearInterval(calibrationInterval);
                         return;
                     }
-                    
+
                     try {
                         const detections = await faceapi
                             .detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions())
                             .withFaceExpressions();
-                            
+
                         if (detections && detections.length > 0) {
                             neutralSamples.push(detections[0].expressions);
                         }
                     } catch (error) {
                         console.error('Erro na calibração:', error);
                     }
-                    
+
                     if (Date.now() - calibrationStart >= 3000) {
                         clearInterval(calibrationInterval);
                         this.updateStatus('✅ Calibração concluída!', false, false, true);
                         console.log('Amostras de calibração coletadas:', neutralSamples.length);
-                        
+
                         setTimeout(() => {
                             if (this.isRunning) {
                                 this.updateStatus('Detectando expressões...');
@@ -725,8 +737,12 @@
                     statusContainer.classList.add('loading');
                 }
 
-                statusElement.innerHTML = loading ?
-                    `<span class="loading"></span> ${text}` : text;
+                // Atualiza o conteúdo de forma que apenas o spinner gire
+                if (loading) {
+                    statusElement.innerHTML = `<span class="loading"></span><span>${text}</span>`;
+                } else {
+                    statusElement.innerHTML = text;
+                }
             }
         }
 
