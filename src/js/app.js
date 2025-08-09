@@ -13,23 +13,11 @@ class FacialExpressionDetector {
     this.availableCameras = [];
     this.selectedCameraId = null;
 
-    this.expressions = {
-      happy: "Alexa, tocar música",
-      surprised: "Alexa, pausar",
-      angry: "Alexa, parar música",
-      sad: "Alexa, diminuir luzes",
-      neutral: "Alexa, acender luzes",
-    };
-
-    this.expressionNames = {
-      happy: "sorriso",
-      surprised: "surpresa",
-      angry: "raiva",
-      sad: "tristeza",
-      neutral: "neutro",
-    };
+    // Usar o motor de expressões faciais separado
+    this.expressionEngine = new FacialExpressionEngine();
 
     this.setupEventListeners();
+    this.renderCommandsList();
     this.loadCameras();
     this.loadModels();
   }
@@ -148,6 +136,29 @@ class FacialExpressionDetector {
     document
       .getElementById("calibrateBtn")
       .addEventListener("click", () => this.calibrate());
+
+    // Event listeners para configuração
+    document
+      .getElementById("configBtn")
+      .addEventListener("click", () => this.openConfigModal());
+    document
+      .getElementById("closeModal")
+      .addEventListener("click", () => this.closeConfigModal());
+    document
+      .getElementById("saveConfig")
+      .addEventListener("click", () => this.saveConfiguration());
+    document
+      .getElementById("resetConfig")
+      .addEventListener("click", () => this.resetConfiguration());
+    document
+      .getElementById("addCustomExpression")
+      .addEventListener("click", () => this.addCustomExpression());
+
+    // Fechar modal ao clicar fora
+    document.getElementById("configModal").addEventListener("click", (e) => {
+      if (e.target.id === "configModal") this.closeConfigModal();
+    });
+
     this.cameraSelect.addEventListener("change", (e) => {
       this.selectedCameraId = e.target.value;
       localStorage.setItem("selectedCameraId", this.selectedCameraId);
@@ -236,7 +247,18 @@ class FacialExpressionDetector {
         if (detections && detections.length > 0) {
           const detection = detections[0];
           this.drawFaceDetection(detection.detection.box);
-          this.processRealExpression(detection.expressions);
+
+          // Usar o motor de expressões para processar
+          const result = this.expressionEngine.processExpressions(
+            detection.expressions,
+            detection.landmarks
+          );
+
+          this.updateExpressionDisplay(result);
+
+          if (result.triggered) {
+            this.sendAlexaCommand(result.expression, result.config);
+          }
         } else {
           document.getElementById("expressionText").textContent =
             "😐 Neutro (Nenhuma face)";
@@ -247,50 +269,271 @@ class FacialExpressionDetector {
     }, 100);
   }
 
-  processRealExpression(expressions) {
-    let maxExpression = "neutral";
-    let maxConfidence = 0;
-    for (const [expression, confidence] of Object.entries(expressions)) {
-      if (confidence > maxConfidence && confidence > 0.3) {
-        maxConfidence = confidence;
-        maxExpression = expression;
+  updateExpressionDisplay(result) {
+    this.currentExpression = result.expression;
+    const expressionName = this.expressionEngine.getExpressionDisplayName(
+      result.expression
+    );
+
+    if (result.progress > 0 && result.config) {
+      const holdTime = result.config.holdTime || 2.0;
+      document.getElementById(
+        "expressionText"
+      ).textContent = `${expressionName} (${Math.round(
+        result.progress
+      )}% - ${holdTime}s)`;
+    } else {
+      document.getElementById(
+        "expressionText"
+      ).textContent = `${expressionName} (${Math.round(
+        result.confidence * 100
+      )}%)`;
+    }
+  }
+
+  renderCommandsList() {
+    const container = document.getElementById("commandsList");
+    container.innerHTML = "";
+
+    const activeExpressions = this.expressionEngine.getActiveExpressions();
+
+    activeExpressions.forEach((expression) => {
+      const item = document.createElement("div");
+      item.className = "command-item";
+      item.innerHTML = `
+        <span class="emotion">${expression.name}</span>
+        <span>🎵 "${expression.command}" (${expression.holdTime}s)</span>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  openConfigModal() {
+    document.getElementById("configModal").style.display = "flex";
+    this.populateConfigModal();
+  }
+
+  closeConfigModal() {
+    document.getElementById("configModal").style.display = "none";
+  }
+
+  populateConfigModal() {
+    const container = document.getElementById("expressionConfigs");
+    container.innerHTML = "";
+
+    const allExpressions = this.expressionEngine.getAllExpressions();
+
+    // Obter todas as opções possíveis de expressão
+    const allOptions = allExpressions.map((e) => ({
+      key: e.key,
+      name: e.name,
+    }));
+    allExpressions.forEach((expression) => {
+      const expressionDiv = document.createElement("div");
+      expressionDiv.className = "expression-config";
+      expressionDiv.innerHTML = `
+        <div class="config-row">
+          <label class="input-label">
+        Expressão
+        <select class="expression-select" onchange="window.detector.updateExpressionKey('${
+          expression.key
+        }', this.value)">
+          ${allOptions
+            .map(
+              (opt) =>
+                `<option value="${opt.key}" ${
+                  opt.key === expression.key ? "selected" : ""
+                }>${opt.name}</option>`
+            )
+            .join("")}
+        </select>
+          </label>
+          <label class="input-label">
+        Comando
+        <input type="text" value="${expression.command}" 
+           placeholder="Comando Alexa..." 
+           onchange="window.detector.updateExpressionCommand('${
+             expression.key
+           }', this.value)">
+          </label>
+          <label class="input-label">
+            Tempo (s)<br>
+            <input type="number" class="time-input" value="${
+              expression.holdTime
+            }" 
+              min="0.5" max="10" step="0.5" placeholder="Tempo"
+              onchange="window.detector.updateExpressionHoldTime('${
+                expression.key
+              }', this.value)">
+          </label>
+          <div class="action-buttons">
+        <button class="remove-btn" onclick="window.detector.removeExpression('${
+          expression.key
+        }')" title="Remover" style="margin-top: 15px;">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+          </div>
+        </div>
+      `;
+      container.appendChild(expressionDiv);
+    });
+
+    // Formulário para adicionar expressão customizada (igual aos itens, com select)
+    const formDiv = document.createElement("div");
+    formDiv.className = "expression-config expression-add-form";
+    
+    // Criar lista de expressões preset disponíveis
+    const presetExpressions = [
+      { key: "😊 Sorriso", name: "😊 Sorriso" },
+      { key: "😮 Surpresa", name: "😮 Surpresa" },
+      { key: "😤 Raiva", name: "😤 Raiva" },
+      { key: "😢 Tristeza", name: "😢 Tristeza" },
+      { key: "😐 Neutro", name: "😐 Neutro" },
+      { key: "😉 Piscar Olho Esquerdo", name: "😉 Piscar Olho Esquerdo" },
+      { key: "😜 Piscar Olho Direito", name: "😜 Piscar Olho Direito" },
+      { key: "🙂 Sorrir Lado Esquerdo", name: "🙂 Sorrir Lado Esquerdo" },
+      { key: "🙃 Sorrir Lado Direito", name: "🙃 Sorrir Lado Direito" },
+      { key: "😟 Franzir Testa", name: "😟 Franzir Testa" },
+      { key: "😲 Boca Aberta", name: "😲 Boca Aberta" },
+      { key: "🤨 Levantar Sobrancelha", name: "🤨 Levantar Sobrancelha" },
+      { key: "😗 Bico", name: "😗 Bico" },
+      { key: "😎 Óculos", name: "😎 Óculos" },
+      { key: "😴 Sonolento", name: "😴 Sonolento" },
+      { key: "🤔 Pensativo", name: "🤔 Pensativo" }
+    ];
+    
+    formDiv.innerHTML = `
+      <div class="config-row">
+        <label class="input-label">
+          Expressão
+          <select id="newExpressionName" class="expression-select">
+            <option value="">Selecione...</option>
+            ${presetExpressions
+              .map((opt) => `<option value="${opt.key}">${opt.name}</option>`)
+              .join("")}
+            <option value="custom">✨ Nova Expressão Personalizada</option>
+          </select>
+          <input type="text" id="newExpressionNameCustom" class="expression-select" placeholder="Nome personalizado" style="display:none; margin-top:6px;" />
+        </label>
+        <label class="input-label">
+          Comando
+          <input type="text" id="newExpressionCommand" placeholder="Comando Alexa">
+        </label>
+        <label class="input-label">
+          Tempo (s)
+          <input type="number" id="newExpressionHoldTime" class="time-input" min="0.5" max="10" step="0.5" placeholder="Tempo (s)">
+        </label>
+        <div class="action-buttons">
+          <button class="add-btn" onclick="window.detector.handleAddCustomExpression()" title="Adicionar" style="margin-top: 15px;">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    container.appendChild(formDiv);
+
+    // Mostrar input customizado se "Nova Expressão" for selecionada
+    setTimeout(() => {
+      const select = document.getElementById("newExpressionName");
+      const customInput = document.getElementById("newExpressionNameCustom");
+      if (select && customInput) {
+        select.addEventListener("change", function () {
+          if (this.value === "custom") {
+            customInput.style.display = "block";
+          } else {
+            customInput.style.display = "none";
+          }
+        });
       }
+    }, 100);
+  }
+
+  updateExpressionCommand(key, command) {
+    this.expressionEngine.updateExpression(key, { command });
+  }
+
+  updateExpressionHoldTime(key, holdTime) {
+    this.expressionEngine.updateExpression(key, {
+      holdTime: parseFloat(holdTime),
+    });
+  }
+
+  toggleExpression(key, enabled) {
+    this.expressionEngine.updateExpression(key, { enabled });
+  }
+
+  removeExpression(key) {
+    if (this.expressionEngine.removeExpression(key)) {
+      this.populateConfigModal();
+    } else {
+      alert(
+        "Não é possível remover expressões padrão. Use o botão 'Ativo' para desabilitá-las."
+      );
     }
-    const expressionPt = this.expressionNames[maxExpression] || "neutro";
-    this.currentExpression = expressionPt;
-    document.getElementById(
-      "expressionText"
-    ).textContent = `${this.getExpressionEmoji(expressionPt)} (${Math.round(
-      maxConfidence * 100
-    )}%)`;
-    const now = Date.now();
+  }
+
+  handleAddCustomExpression() {
+    let name = document.getElementById("newExpressionName").value;
+    const customNameInput = document.getElementById("newExpressionNameCustom");
+    if (name === "custom" && customNameInput) {
+      name = customNameInput.value.trim();
+    }
+    const command = document
+      .getElementById("newExpressionCommand")
+      .value.trim();
+    const holdTime = parseFloat(
+      document.getElementById("newExpressionHoldTime").value
+    );
+    if (name && command && holdTime) {
+      this.expressionEngine.addCustomExpression(name, command, holdTime);
+      this.populateConfigModal();
+    } else {
+      alert("Preencha todos os campos para adicionar uma expressão.");
+    }
+  }
+
+  updateExpressionKey(oldKey, newKey) {
+    // Troca a expressão associada ao comando (apenas para customizadas)
     if (
-      maxConfidence > 0.6 &&
-      (!this.lastCommand || now - this.lastCommand > this.commandCooldown)
+      oldKey !== newKey &&
+      this.expressionEngine.expressions[oldKey] &&
+      this.expressionEngine.expressions[newKey]
     ) {
-      this.sendAlexaCommand(maxExpression);
-      this.lastCommand = now;
+      // Troca apenas o comando, tempo e enabled para a nova expressão
+      const oldConfig = this.expressionEngine.expressions[oldKey];
+      this.expressionEngine.updateExpression(newKey, {
+        command: oldConfig.command,
+        holdTime: oldConfig.holdTime,
+        enabled: oldConfig.enabled,
+      });
+      this.expressionEngine.removeExpression(oldKey);
+      this.populateConfigModal();
     }
   }
 
-  getExpressionEmoji(expression) {
-    const emojis = {
-      sorriso: "😊 Sorriso",
-      surpresa: "😮 Surpresa",
-      raiva: "😤 Raiva",
-      tristeza: "😢 Tristeza",
-      neutro: "😐 Neutro",
-      happy: "😊 Sorriso",
-      surprised: "😮 Surpresa",
-      angry: "😤 Raiva",
-      sad: "😢 Tristeza",
-      neutral: "😐 Neutro",
-    };
-    return emojis[expression] || "😐 Neutro";
+  saveConfiguration() {
+    this.expressionEngine.saveExpressionConfig();
+    this.renderCommandsList();
+    this.closeConfigModal();
+    this.updateStatus("✅ Configurações salvas!", false, false, true);
+    setTimeout(() => {
+      if (this.isRunning) this.updateStatus("Detectando expressões...");
+    }, 2000);
   }
 
-  async sendAlexaCommand(expression) {
-    const command = this.expressions[expression];
+  resetConfiguration() {
+    if (confirm("Resetar para configurações padrão?")) {
+      this.expressionEngine.resetToDefault();
+      this.populateConfigModal();
+      this.renderCommandsList();
+      this.updateStatus("🔄 Configurações resetadas!", false, false, true);
+    }
+  }
+
+  async sendAlexaCommand(expression, config) {
+    if (!config || !config.enabled) return;
+
+    const command = config.command;
     try {
       this.updateStatus(`Enviando comando: "${command}"`, true);
       await this.simulateAlexaRequest(command);
@@ -317,7 +560,7 @@ class FacialExpressionDetector {
     this.ctx.fillStyle = "#00ff00";
     this.ctx.font = "20px Arial";
     this.ctx.fillText(
-      this.getExpressionEmoji(this.currentExpression),
+      this.expressionEngine.getExpressionDisplayName(this.currentExpression),
       faceBox.x,
       faceBox.y - 10
     );
@@ -384,9 +627,9 @@ class FacialExpressionDetector {
   }
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => new FacialExpressionDetector()
-);
+document.addEventListener("DOMContentLoaded", () => {
+  window.detector = new FacialExpressionDetector();
+});
+
 if ("serviceWorker" in navigator)
   navigator.serviceWorker.register("/sw.js").catch(console.error);

@@ -1,3 +1,40 @@
+.expression-config input[type="text"],
+.expression-config input[type="number"],
+.expression-add-form input[type="text"],
+.expression-add-form input[type="number"] {
+    outline: none;
+    box-shadow: none;
+    border: 1px solid #888;
+    background: #FFFFFF1A;
+    color: #fff;
+    transition: border 0.2s;
+}
+
+.expression-config input[type="text"]:focus,
+.expression-config input[type="number"]:focus,
+.expression-add-form input[type="text"]:focus,
+.expression-add-form input[type="number"]:focus {
+    border: 1.5px solid #4fc3f7;
+}
+
+.input-label {
+    display: flex;
+    flex-direction: column;
+    font-size: small;
+    color: #b3c6ff;
+    font-weight: 500;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 120px;
+    max-width: 220px;
+}
+
+.expression-add-form .input-label input,
+.expression-config .input-label input,
+.expression-config .input-label select {
+    margin-top: 2px;
+}
+
 body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -166,6 +203,7 @@ button:disabled {
     text-align: center;
     font-size: 18px;
     transition: all .3s ease;
+    height: 120px;
 }
 
 @media (min-width: 1024px) {
@@ -181,11 +219,36 @@ button:disabled {
     border-left: 4px solid #2196f3;
 }
 
+.status-display {
+    font-size: small;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    min-height: 1.7em;
+    line-height: 1.2;
+    margin-top: 10px;
+}
+
 .expression-display {
-    font-size: 2em;
+    font-size: 1.1em;
     font-weight: bold;
     color: #ffeb3b;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    min-height: 1.7em;
+    line-height: 1.2;
+    margin-top: 2px;
+    transition: color 0.2s;
+}
+
+.expression-status-block {
+    margin-top: 10px;
+    min-height: 3.2em;
+    font-size: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    height: 60px;
 }
 
 .commands-list {
@@ -290,8 +353,9 @@ button:disabled {
 /* Melhorias para tablets */
 @media (min-width: 601px) and (max-width: 1023px) {
     .container {
-        padding: 30px;
-        width: calc(100% - 60px);
+        padding: 25px;
+        margin: 15px;
+        width: calc(100% - 30px);
     }
 
     h1 {
@@ -301,4 +365,296 @@ button:disabled {
     .video-container {
         max-width: 500px;
     }
+}
+
+/* Estilos para configuração de comandos */
+.commands-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.commands-header h3 {
+    margin: 0;
+}
+
+.config-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.config-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.commands-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Modal de configuração */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(15px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 0;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: white;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+    padding: 0;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    max-width: 32px;
+    max-height: 32px;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-body {
+    padding: 25px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.config-section {
+    margin-bottom: 25px;
+}
+
+.config-section label {
+    display: block;
+    font-weight: bold;
+    color: white;
+}
+
+.config-section input,
+.config-section select,
+.config-section textarea {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 14px;
+}
+
+.config-section input::placeholder,
+.config-section textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.expression-config {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.expression-config h5 {
+    margin: 0 0 10px 0;
+    color: #ffeb3b;
+    font-size: 14px;
+}
+
+.expression-config .config-row {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr 1fr 0.7fr;
+    gap: 10px;
+    align-items: start;
+}
+
+.expression-config .config-row>* {
+    min-width: 0;
+    /* max-width: 220px; */
+    width: 100%;
+}
+
+.expression-config .action-buttons {
+    flex: 0 0 auto;
+}
+
+.expression-select {
+    min-width: 120px;
+    max-width: 220px;
+    font-size: 1em;
+    border-radius: 6px;
+    padding: 6px 8px;
+    border: 1px solid #888;
+    background: #3d3e3e;
+    color: #fff;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.15);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+.expression-select:focus {
+    border: 1.5px solid #4fc3f7;
+    outline: none;
+    box-shadow: 0 0 0 2px #2196f355;
+}
+
+.expression-select option {
+    background: #3d3e3e;
+    color: #fff;
+}
+
+.expression-add-form {
+    margin-top: 18px;
+}
+
+.expression-config .time-input {
+    width: 80px;
+    margin-bottom: 0;
+}
+
+.expression-config .action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.expression-config .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.expression-config input {
+    margin-bottom: 0;
+}
+
+.remove-btn {
+    background: rgba(244, 67, 54, 0.3);
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.remove-btn:hover {
+    background: rgba(244, 67, 54, 0.5);
+}
+
+.modal-footer {
+    padding: 20px 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.add-btn,
+.remove-btn,
+.save-btn,
+.reset-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    height: 40px;
+}
+
+.add-btn {
+    background: rgba(76, 175, 80, 0.3);
+    color: white;
+}
+
+.add-btn:hover {
+    background: rgba(76, 175, 80, 0.5);
+}
+
+.save-btn {
+    background: rgba(33, 150, 243, 0.3);
+    color: white;
+}
+
+.save-btn:hover {
+    background: rgba(33, 150, 243, 0.5);
+}
+
+.reset-btn {
+    background: rgba(255, 152, 0, 0.3);
+    color: white;
+}
+
+.reset-btn:hover {
+    background: rgba(255, 152, 0, 0.5);
 }
