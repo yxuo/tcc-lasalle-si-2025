@@ -16,10 +16,12 @@ class FacialExpressionDetector {
     // Usar o motor de expressões faciais separado
     this.expressionEngine = new FacialExpressionEngine();
 
+    this.isMirrored = true;
     this.setupEventListeners();
     this.renderCommandsList();
     this.loadCameras();
     this.loadModels();
+    this.applyMirror();
   }
 
   async loadCameras() {
@@ -127,6 +129,10 @@ class FacialExpressionDetector {
   }
 
   setupEventListeners() {
+    document.getElementById("mirrorBtn").addEventListener("click", () => {
+      this.isMirrored = !this.isMirrored;
+      this.applyMirror();
+    });
     document
       .getElementById("startBtn")
       .addEventListener("click", () => this.startCamera());
@@ -211,7 +217,18 @@ class FacialExpressionDetector {
       this.isRunning = true;
       this.updateStatus("Câmera ativa - Detectando expressões");
     } catch (e) {
-      this.updateStatus("Erro ao acessar câmera: " + e.message, false, true);
+      let msg = "Erro ao acessar câmera: " + e.message;
+      // Tratamento específico para câmera em uso
+      const inUseMessages = ["could not start video source", "device in use"];
+      if (
+        e &&
+        (e.name === "NotReadableError" ||
+          inUseMessages.some((m) => e.message?.toLowerCase().includes(m)))
+      ) {
+        msg =
+          "A câmera já está em uso por outro aplicativo. Feche outros aplicativos que possam estar usando a câmera e tente novamente.";
+      }
+      this.updateStatus(msg, false, true);
       console.error("Erro detalhado da câmera:", e);
     }
   }
@@ -275,13 +292,12 @@ class FacialExpressionDetector {
       result.expression
     );
 
+    // Atualizar texto da expressão
     if (result.progress > 0 && result.config) {
       const holdTime = result.config.holdTime || 2.0;
       document.getElementById(
         "expressionText"
-      ).textContent = `${expressionName} (${Math.round(
-        result.progress
-      )}% - ${holdTime}s)`;
+      ).textContent = `${expressionName} (${holdTime}s)`;
     } else {
       document.getElementById(
         "expressionText"
@@ -289,23 +305,71 @@ class FacialExpressionDetector {
         result.confidence * 100
       )}%)`;
     }
+
+    // Gerenciar barra de progresso
+    const statusBlock = document.querySelector('.expression-status-block');
+    let progressBar = statusBlock.querySelector('.expression-progress-bar');
+    
+    if (result.progress > 0 && result.config) {
+      // Criar barra de progresso se não existir
+      if (!progressBar) {
+        progressBar = document.createElement('div');
+        progressBar.className = 'expression-progress-bar';
+        statusBlock.appendChild(progressBar);
+      }
+      
+      // Atualizar largura da barra
+      progressBar.style.width = `${result.progress}%`;
+      
+      // Adicionar classe completed quando atingir 100%
+      if (result.progress >= 100) {
+        progressBar.classList.add('completed');
+      } else {
+        progressBar.classList.remove('completed');
+      }
+    } else {
+      // Remover barra de progresso quando não há progress
+      if (progressBar) {
+        progressBar.style.width = '0%';
+        setTimeout(() => {
+          if (progressBar && progressBar.style.width === '0%') {
+            progressBar.remove();
+          }
+        }, 200); // Pequeno delay para animação suave
+      }
+    }
   }
 
   renderCommandsList() {
     const container = document.getElementById("commandsList");
     container.innerHTML = "";
 
-    const activeExpressions = this.expressionEngine.getActiveExpressions();
+    // Comandos do usuário
+    const userExpressions = this.expressionEngine
+      .getUserExpressions()
+      .filter((e) => e.enabled);
 
-    activeExpressions.forEach((expression) => {
-      const item = document.createElement("div");
-      item.className = "command-item";
-      item.innerHTML = `
-        <span class="emotion">${expression.name}</span>
-        <span>🎵 "${expression.command}" (${expression.holdTime}s)</span>
-      `;
-      container.appendChild(item);
-    });
+    const userHeader = document.createElement("div");
+    userHeader.className = "commands-section-header";
+    userHeader.textContent = "Seus comandos";
+    container.appendChild(userHeader);
+
+    if (userExpressions.length === 0) {
+      const emptyMsg = document.createElement("div");
+      emptyMsg.className = "commands-empty";
+      emptyMsg.textContent = "Nenhum comando adicionado ainda.";
+      container.appendChild(emptyMsg);
+    } else {
+      userExpressions.forEach((expression) => {
+        const item = document.createElement("div");
+        item.className = "command-item";
+        item.innerHTML = `
+          <span class=\"emotion\">${expression.name}</span>
+          <span>🎵 \"${expression.command}\" (${expression.holdTime}s)</span>
+        `;
+        container.appendChild(item);
+      });
+    }
   }
 
   openConfigModal() {
@@ -322,12 +386,28 @@ class FacialExpressionDetector {
     container.innerHTML = "";
 
     const allExpressions = this.expressionEngine.getAllExpressions();
-
-    // Obter todas as opções possíveis de expressão
-    const allOptions = allExpressions.map((e) => ({
-      key: e.key,
-      name: e.name,
-    }));
+    // Lista de presets para o dropdown (definida uma vez fora do escopo duplicado)
+    if (!window._presetExpressions) {
+      window._presetExpressions = [
+        { key: "😊 Sorriso", name: "😊 Sorriso" },
+        { key: "😮 Surpresa", name: "😮 Surpresa" },
+        { key: "😤 Raiva", name: "😤 Raiva" },
+        { key: "😢 Tristeza", name: "😢 Tristeza" },
+        { key: "😐 Neutro", name: "😐 Neutro" },
+        { key: "😉 Piscar Olho Esquerdo", name: "😉 Piscar Olho Esquerdo" },
+        { key: "😜 Piscar Olho Direito", name: "😜 Piscar Olho Direito" },
+        { key: "🙂 Sorrir Lado Esquerdo", name: "🙂 Sorrir Lado Esquerdo" },
+        { key: "🙃 Sorrir Lado Direito", name: "🙃 Sorrir Lado Direito" },
+        { key: "😟 Franzir Testa", name: "😟 Franzir Testa" },
+        { key: "😲 Boca Aberta", name: "😲 Boca Aberta" },
+        { key: "🤨 Levantar Sobrancelha", name: "🤨 Levantar Sobrancelha" },
+        { key: "😗 Bico", name: "😗 Bico" },
+        { key: "😎 Óculos", name: "😎 Óculos" },
+        { key: "😴 Sonolento", name: "😴 Sonolento" },
+        { key: "🤔 Pensativo", name: "🤔 Pensativo" },
+      ];
+    }
+    // Use window._presetExpressions diretamente abaixo, sem redeclarar
     allExpressions.forEach((expression) => {
       const expressionDiv = document.createElement("div");
       expressionDiv.className = "expression-config";
@@ -338,14 +418,15 @@ class FacialExpressionDetector {
         <select class="expression-select" onchange="window.detector.updateExpressionKey('${
           expression.key
         }', this.value)">
-          ${allOptions
+          ${window._presetExpressions
             .map(
               (opt) =>
                 `<option value="${opt.key}" ${
-                  opt.key === expression.key ? "selected" : ""
+                  opt.name === expression.name ? "selected" : ""
                 }>${opt.name}</option>`
             )
             .join("")}
+          <option value="custom">✨ Nova Expressão Personalizada</option>
         </select>
           </label>
           <label class="input-label">
@@ -381,7 +462,7 @@ class FacialExpressionDetector {
     // Formulário para adicionar expressão customizada (igual aos itens, com select)
     const formDiv = document.createElement("div");
     formDiv.className = "expression-config expression-add-form";
-    
+
     // Criar lista de expressões preset disponíveis
     const presetExpressions = [
       { key: "😊 Sorriso", name: "😊 Sorriso" },
@@ -399,9 +480,9 @@ class FacialExpressionDetector {
       { key: "😗 Bico", name: "😗 Bico" },
       { key: "😎 Óculos", name: "😎 Óculos" },
       { key: "😴 Sonolento", name: "😴 Sonolento" },
-      { key: "🤔 Pensativo", name: "🤔 Pensativo" }
+      { key: "🤔 Pensativo", name: "🤔 Pensativo" },
     ];
-    
+
     formDiv.innerHTML = `
       <div class="config-row">
         <label class="input-label">
@@ -450,12 +531,14 @@ class FacialExpressionDetector {
 
   updateExpressionCommand(key, command) {
     this.expressionEngine.updateExpression(key, { command });
+    this.renderCommandsList();
   }
 
   updateExpressionHoldTime(key, holdTime) {
     this.expressionEngine.updateExpression(key, {
       holdTime: parseFloat(holdTime),
     });
+    this.renderCommandsList();
   }
 
   toggleExpression(key, enabled) {
@@ -465,6 +548,7 @@ class FacialExpressionDetector {
   removeExpression(key) {
     if (this.expressionEngine.removeExpression(key)) {
       this.populateConfigModal();
+      this.renderCommandsList();
     } else {
       alert(
         "Não é possível remover expressões padrão. Use o botão 'Ativo' para desabilitá-las."
@@ -487,28 +571,31 @@ class FacialExpressionDetector {
     if (name && command && holdTime) {
       this.expressionEngine.addCustomExpression(name, command, holdTime);
       this.populateConfigModal();
+      this.renderCommandsList();
+      // Limpar formulário
+      document.getElementById("newExpressionName").value = "";
+      document.getElementById("newExpressionCommand").value = "";
+      document.getElementById("newExpressionHoldTime").value = "";
+      if (customNameInput) {
+        customNameInput.value = "";
+        customNameInput.style.display = "none";
+      }
     } else {
       alert("Preencha todos os campos para adicionar uma expressão.");
     }
   }
 
-  updateExpressionKey(oldKey, newKey) {
-    // Troca a expressão associada ao comando (apenas para customizadas)
-    if (
-      oldKey !== newKey &&
-      this.expressionEngine.expressions[oldKey] &&
-      this.expressionEngine.expressions[newKey]
-    ) {
-      // Troca apenas o comando, tempo e enabled para a nova expressão
-      const oldConfig = this.expressionEngine.expressions[oldKey];
-      this.expressionEngine.updateExpression(newKey, {
-        command: oldConfig.command,
-        holdTime: oldConfig.holdTime,
-        enabled: oldConfig.enabled,
-      });
-      this.expressionEngine.removeExpression(oldKey);
-      this.populateConfigModal();
+  updateExpressionKey(key, newExpressionName) {
+    // Atualiza apenas o nome da expressão, mantendo a mesma chave
+    if (newExpressionName === "custom") {
+      // Se escolheu "custom", não faz nada (seria para criar nova expressão)
+      return;
     }
+
+    // Atualiza o nome da expressão
+    this.expressionEngine.updateExpression(key, { name: newExpressionName });
+    this.populateConfigModal();
+    this.renderCommandsList();
   }
 
   saveConfiguration() {
@@ -519,6 +606,10 @@ class FacialExpressionDetector {
     setTimeout(() => {
       if (this.isRunning) this.updateStatus("Detectando expressões...");
     }, 2000);
+    // Garante atualização do modal após salvar
+    setTimeout(() => {
+      this.populateConfigModal();
+    }, 300);
   }
 
   resetConfiguration() {
@@ -553,6 +644,31 @@ class FacialExpressionDetector {
   }
 
   drawFaceDetection(faceBox) {
+    // Limpa o canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Desenha o frame do vídeo espelhado, se ativado
+    if (this.isMirrored) {
+      this.ctx.save();
+      this.ctx.translate(this.canvas.width, 0);
+      this.ctx.scale(-1, 1);
+      this.ctx.drawImage(
+        this.video,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+      this.ctx.restore();
+    } else {
+      this.ctx.drawImage(
+        this.video,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+    }
+    // Agora desenha as marcações e textos SEM espelhar
     this.ctx.strokeStyle = "#00ff00";
     this.ctx.lineWidth = 3;
     this.ctx.setLineDash([]);
@@ -571,6 +687,15 @@ class FacialExpressionDetector {
       faceBox.x,
       faceBox.y + faceBox.height + 20
     );
+  }
+
+  applyMirror() {
+    const video = this.video;
+    if (this.isMirrored) {
+      video.style.transform = "scaleX(-1)";
+    } else {
+      video.style.transform = "none";
+    }
   }
 
   calibrate() {

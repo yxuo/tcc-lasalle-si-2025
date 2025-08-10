@@ -73,6 +73,7 @@ class FacialExpressionEngine {
       },
     };
 
+    // Inicializa comandos do usuário a partir do localStorage, ou vazio
     this.expressions = this.loadExpressionConfig();
     this.confidenceThreshold = 0.6;
     this.expressionStates = new Map(); // Track individual expression timing
@@ -208,7 +209,23 @@ class FacialExpressionEngine {
       }
     }
 
-    const expressionConfig = this.expressions[bestExpression.key];
+    // Buscar configuração da expressão - primeiro tenta pela chave direta, depois por nome
+    let expressionConfig = this.expressions[bestExpression.key];
+    let finalKey = bestExpression.key;
+    
+    // Se não encontrou pela chave, busca por nome de expressão correspondente
+    if (!expressionConfig && this.defaultExpressions[bestExpression.key]) {
+      const defaultName = this.defaultExpressions[bestExpression.key].name;
+      // Busca uma expressão do usuário que tenha o mesmo nome
+      for (const [userKey, userConfig] of Object.entries(this.expressions)) {
+        if (userConfig.name === defaultName) {
+          expressionConfig = userConfig;
+          finalKey = userKey;
+          break;
+        }
+      }
+    }
+
     const currentTime = Date.now();
 
     // Sistema de hold time individual para cada expressão
@@ -216,14 +233,14 @@ class FacialExpressionEngine {
       bestExpression.confidence > this.confidenceThreshold &&
       expressionConfig?.enabled
     ) {
-      const state = this.expressionStates.get(bestExpression.key) || {
+      const state = this.expressionStates.get(finalKey) || {
         startTime: null,
         lastTrigger: 0,
       };
 
       if (!state.startTime) {
         state.startTime = currentTime;
-        this.expressionStates.set(bestExpression.key, state);
+        this.expressionStates.set(finalKey, state);
       }
 
       const holdDuration = (currentTime - state.startTime) / 1000;
@@ -234,11 +251,11 @@ class FacialExpressionEngine {
         if (currentTime - state.lastTrigger > 3000) {
           state.lastTrigger = currentTime;
           state.startTime = null;
-          this.expressionStates.set(bestExpression.key, state);
+          this.expressionStates.set(finalKey, state);
 
           return {
             triggered: true,
-            expression: bestExpression.key,
+            expression: finalKey,
             config: expressionConfig,
             confidence: bestExpression.confidence,
             progress: 100,
@@ -248,18 +265,18 @@ class FacialExpressionEngine {
 
       return {
         triggered: false,
-        expression: bestExpression.key,
+        expression: finalKey,
         config: expressionConfig,
         confidence: bestExpression.confidence,
         progress: Math.min((holdDuration / requiredHoldTime) * 100, 100),
       };
     } else {
-      // Limpar estado se expressão não detectada
-      this.expressionStates.delete(bestExpression.key);
+      // Limpar TODOS os estados quando expressão não detectada ou não habilitada
+      this.expressionStates.clear();
 
       return {
         triggered: false,
-        expression: bestExpression.key,
+        expression: finalKey,
         config: expressionConfig,
         confidence: bestExpression.confidence,
         progress: 0,
@@ -271,7 +288,18 @@ class FacialExpressionEngine {
    * Obtém nome de exibição da expressão
    */
   getExpressionDisplayName(expression) {
-    return this.expressions[expression]?.name || "😐 Neutro";
+    // Primeiro tenta buscar na configuração do usuário
+    if (this.expressions[expression]?.name) {
+      return this.expressions[expression].name;
+    }
+    
+    // Se não encontrou, busca nos defaults
+    if (this.defaultExpressions[expression]?.name) {
+      return this.defaultExpressions[expression].name;
+    }
+    
+    // Fallback para neutro
+    return "😐 Neutro";
   }
 
   /**
@@ -281,12 +309,34 @@ class FacialExpressionEngine {
     const saved = localStorage.getItem("expressionConfig");
     if (saved) {
       try {
-        return { ...this.defaultExpressions, ...JSON.parse(saved) };
+        return JSON.parse(saved);
       } catch (e) {
         console.error("Erro ao carregar configuração:", e);
       }
     }
-    return { ...this.defaultExpressions };
+    // Começa vazio (sem comandos do usuário)
+    return {};
+  }
+  /**
+   * Retorna lista dos presets (apenas referência, não editável)
+   */
+  getPresetExpressions() {
+    return Object.entries(this.defaultExpressions).map(([key, config]) => ({
+      key,
+      ...config,
+      isDefault: true,
+    }));
+  }
+
+  /**
+   * Retorna lista dos comandos do usuário (customizados)
+   */
+  getUserExpressions() {
+    return Object.entries(this.expressions).map(([key, config]) => ({
+      key,
+      ...config,
+      isDefault: false,
+    }));
   }
 
   /**
@@ -300,10 +350,25 @@ class FacialExpressionEngine {
    * Atualiza configuração de uma expressão
    */
   updateExpression(key, updates) {
-    if (this.expressions[key]) {
-      this.expressions[key] = { ...this.expressions[key], ...updates };
-      this.saveExpressionConfig();
+    // Se a expressão não existe ainda, criar baseada no preset
+    if (!this.expressions[key]) {
+      // Verifica se é um preset conhecido
+      if (this.defaultExpressions[key]) {
+        this.expressions[key] = { ...this.defaultExpressions[key] };
+      } else {
+        // Se não é preset, cria uma nova expressão básica
+        this.expressions[key] = {
+          name: key,
+          command: "",
+          enabled: true,
+          holdTime: 2.0,
+        };
+      }
     }
+
+    // Atualiza com as mudanças
+    this.expressions[key] = { ...this.expressions[key], ...updates };
+    this.saveExpressionConfig();
   }
 
   /**
@@ -338,7 +403,7 @@ class FacialExpressionEngine {
    * Reseta configurações para padrão
    */
   resetToDefault() {
-    this.expressions = { ...this.defaultExpressions };
+    this.expressions = {};
     this.expressionStates.clear();
     localStorage.removeItem("expressionConfig");
   }
@@ -353,7 +418,7 @@ class FacialExpressionEngine {
   }
 
   /**
-   * Obtém todas as expressões
+   * Obtém todas as expressões (apenas as do usuário)
    */
   getAllExpressions() {
     return Object.entries(this.expressions).map(([key, config]) => ({
