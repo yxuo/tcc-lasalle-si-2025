@@ -16,12 +16,10 @@ class FacialExpressionDetector {
     // Usar o motor de expressões faciais separado
     this.expressionEngine = new FacialExpressionEngine();
 
-    this.isMirrored = true;
     this.setupEventListeners();
     this.renderCommandsList();
     this.loadCameras();
     this.loadModels();
-    this.applyMirror();
   }
 
   async loadCameras() {
@@ -129,10 +127,6 @@ class FacialExpressionDetector {
   }
 
   setupEventListeners() {
-    document.getElementById("mirrorBtn").addEventListener("click", () => {
-      this.isMirrored = !this.isMirrored;
-      this.applyMirror();
-    });
     document
       .getElementById("startBtn")
       .addEventListener("click", () => this.startCamera());
@@ -646,29 +640,17 @@ class FacialExpressionDetector {
   drawFaceDetection(faceBox) {
     // Limpa o canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    // Desenha o frame do vídeo espelhado, se ativado
-    if (this.isMirrored) {
-      this.ctx.save();
-      this.ctx.translate(this.canvas.width, 0);
-      this.ctx.scale(-1, 1);
-      this.ctx.drawImage(
-        this.video,
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height
-      );
-      this.ctx.restore();
-    } else {
-      this.ctx.drawImage(
-        this.video,
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height
-      );
-    }
-    // Agora desenha as marcações e textos SEM espelhar
+    
+    // Desenha o frame do vídeo normalmente (sem espelhar)
+    this.ctx.drawImage(
+      this.video,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height
+    );
+    
+    // Desenha as marcações e textos
     this.ctx.strokeStyle = "#00ff00";
     this.ctx.lineWidth = 3;
     this.ctx.setLineDash([]);
@@ -687,15 +669,6 @@ class FacialExpressionDetector {
       faceBox.x,
       faceBox.y + faceBox.height + 20
     );
-  }
-
-  applyMirror() {
-    const video = this.video;
-    if (this.isMirrored) {
-      video.style.transform = "scaleX(-1)";
-    } else {
-      video.style.transform = "none";
-    }
   }
 
   calibrate() {
