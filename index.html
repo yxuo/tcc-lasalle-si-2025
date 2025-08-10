@@ -1,11 +1,96 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="0; url=src/index.html" />
-    <title>Redirecionando...</title>
-  </head>
-  <body>
-    <p>Redirecionando para <a href="src/index.html">src/index.html</a>...</p>
-  </body>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Controle Alexa por Expressão</title>
+    <meta name="description" content="Aplicação web para controle de rotinas Alexa via expressões faciais" />
+    <link rel="manifest" href="../manifest.json" />
+    <meta name="theme-color" content="#667eea" />
+    <link rel="icon" type="image/png" href="../icon-192.png" />
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js"></script>
+    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+    <div class="container">
+        <h1>🤖 Controle Alexa por Expressão</h1>
+
+        <div class="main-content">
+            <div class="left-column">
+                <div class="video-container">
+                    <video id="videoElement" autoplay muted playsinline></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+                <div class="camera-selector">
+                    <label for="cameraSelect">📷 Câmera:</label>
+                    <select id="cameraSelect">
+                        <option value="">Carregando câmeras...</option>
+                    </select>
+                    <div class="camera-info" id="cameraInfo">Configuração salva automaticamente</div>
+                </div>
+                <div class="controls">
+                    <button id="startBtn">📹 Iniciar Câmera</button>
+                    <button id="stopBtn" disabled>⏹️ Parar</button>
+                    <button id="calibrateBtn" disabled>🎯 Calibrar</button>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="status">
+                    <div class="expression-status-block">
+                        Expressão Detectada:
+                        <div id="expressionText" class="expression-display">Nenhuma</div>
+                        <div>Status:</div>
+                        <span id="statusText" class="status-display">Aguardando...</span>
+                    </div>
+                </div>
+
+                <div class="commands-list">
+                    <div class="commands-header">
+                        <h3>📋 Comandos Configurados</h3>
+                        <button id="configBtn" class="config-btn">⚙️ Configurar</button>
+                    </div>
+                    <div id="commandsList" class="commands-container">
+                        <!-- Comandos serão inseridos dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Modal removido daqui -->
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Configuração (agora fora da .container) -->
+    <div id="configModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Configurar Comandos</h3>
+                <button id="closeModal" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-section">
+                    <h4>Comandos por Expressão:</h4>
+                    <p style="font-size: 12px; color: rgba(255,255,255,0.7);">
+                        Configure comandos individuais, tempo de sustentação e ative/desative expressões.
+                    </p>
+                    <div id="expressionConfigs">
+                        <!-- Configurações serão inseridas dinamicamente -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="addCustomExpression" class="add-btn">+ Adicionar Expressão
+                        Customizada</button>
+                    <button id="saveConfig" class="save-btn">� Salvar Configurações</button>
+                    <button id="resetConfig" class="reset-btn">🔄 Resetar Padrão</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./js/facial-expressions.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+
 </html>
