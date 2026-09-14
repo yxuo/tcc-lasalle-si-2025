@@ -1,0 +1,27 @@
+{
+  "name": "rotinapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de gestão de rotinas e hábitos com foco em previsibilidade e acessibilidade.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:web": "npm run dev --workspace=@rotinapp/web",
+    "dev:api": "npm run dev --workspace=@rotinapp/api",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate --workspace=@rotinapp/api",
+    "db:seed": "npm run prisma:seed --workspace=@rotinapp/api"
+  }
+}
