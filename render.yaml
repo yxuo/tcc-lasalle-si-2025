@@ -1,10 +1,10 @@
 services:
   # Neon e Vercel sao configurados externamente nos respectivos paineis.
   - type: web
-    name: rotinapp-api
+    name: rotinar-api
     runtime: node
-    buildCommand: npm install && npm run prisma:generate --workspace=@rotinapp/api && npm run prisma:migrate:deploy --workspace=@rotinapp/api && npm run build --workspace=@rotinapp/api
-    startCommand: npm run start --workspace=@rotinapp/api
+    buildCommand: npm install && npm run prisma:generate --workspace=@rotinar/api && npm run prisma:migrate:deploy --workspace=@rotinar/api && npm run build --workspace=@rotinar/api
+    startCommand: npm run start --workspace=@rotinar/api
     envVars:
       - key: DATABASE_URL
         sync: false

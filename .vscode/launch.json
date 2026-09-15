@@ -27,7 +27,7 @@
   ],
   "compounds": [
     {
-      "name": "Rotinapp",
+      "name": "Rotinar",
       "configurations": ["Backend", "Frontend"],
       "stopAll": true
     }

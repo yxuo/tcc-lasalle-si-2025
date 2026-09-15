@@ -22,7 +22,7 @@ describe('GET /health', () => {
 
 describe('auth flow', () => {
   it('registers a user and returns an access token', async () => {
-    const email = `teste-${crypto.randomUUID()}@rotinapp.dev`;
+    const email = `teste-${crypto.randomUUID()}@rotinar.dev`;
     const response = await app.inject({
       method: 'POST',
       url: '/register',
@@ -41,7 +41,7 @@ describe('auth flow', () => {
   });
 
   it('creates a routine for the authenticated user', async () => {
-    const email = `rotina-${crypto.randomUUID()}@rotinapp.dev`;
+    const email = `rotina-${crypto.randomUUID()}@rotinar.dev`;
     const registerResponse = await app.inject({
       method: 'POST',
       url: '/register',
@@ -79,7 +79,7 @@ describe('auth flow', () => {
       url: '/register',
       payload: {
         name: 'Progresso',
-        email: `progresso-${crypto.randomUUID()}@rotinapp.dev`,
+        email: `progresso-${crypto.randomUUID()}@rotinar.dev`,
         password: '12345678',
       },
     });

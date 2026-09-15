@@ -1,5 +1,5 @@
 {
-  "name": "rotinapp",
+  "name": "rotinar",
   "version": "0.1.0",
   "private": true,
   "description": "Sistema de gestão de rotinas e hábitos com foco em previsibilidade e acessibilidade.",
@@ -13,8 +13,8 @@
   },
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "dev:web": "npm run dev --workspace=@rotinapp/web",
-    "dev:api": "npm run dev --workspace=@rotinapp/api",
+    "dev:web": "npm run dev --workspace=@rotinar/web",
+    "dev:api": "npm run dev --workspace=@rotinar/api",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
@@ -22,6 +22,6 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:migrate": "node --env-file=.env apps/api/node_modules/prisma/build/index.js migrate dev --name init --schema apps/api/prisma/schema.prisma",
-    "db:seed": "npm run prisma:seed --workspace=@rotinapp/api"
+    "db:seed": "npm run prisma:seed --workspace=@rotinar/api"
   }
 }
