@@ -61,3 +61,33 @@ npm run db:seed
 
 Se o banco local foi criado previamente com credenciais diferentes, recrie somente o volume de desenvolvimento antes de iniciar: `docker compose down -v`, seguido de `npm run db:up` e `npm run db:migrate`.
 
+
+## Publicação
+
+A aplicação é publicada em três serviços: Neon para PostgreSQL, Render para a API e Vercel para a interface. As URLs e segredos de produção devem ser configurados somente nos painéis dos provedores, nunca no arquivo `.env` enviado ao repositório.
+
+### Neon (banco de dados)
+
+1. Crie um projeto e um banco PostgreSQL no Neon.
+2. Copie a URL pooled para `DATABASE_URL`, usada pela API em execução.
+3. Copie a URL direta para `DIRECT_URL`, usada pelo Prisma para migrations.
+
+### Render (API)
+
+1. Faça o push do repositório e crie um Blueprint no Render usando `render.yaml`.
+2. No serviço `rotinapp-api`, informe as variáveis solicitadas pelo Blueprint:
+	- `DATABASE_URL`: URL pooled do Neon.
+	- `DIRECT_URL`: URL direta do Neon.
+	- `WEB_ORIGIN`: URL de produção completa da Vercel, por exemplo `https://rotinapp.vercel.app`.
+3. O Render gera `JWT_SECRET`, executa `prisma migrate deploy` no build e inicia a API automaticamente.
+4. Confirme a publicação em `https://<sua-api>.onrender.com/health`.
+
+### Vercel (interface)
+
+1. Importe o mesmo repositório na Vercel.
+2. Defina `apps/web` como **Root Directory**.
+3. Use `npm run build` como Build Command e `dist` como Output Directory.
+4. Crie a variável `VITE_API_URL` com a URL pública completa da API Render, por exemplo `https://rotinapp-api.onrender.com`.
+5. Faça o deploy e copie a URL final para `WEB_ORIGIN` no Render. Depois, faça um novo deploy da API.
+
+O frontend usa token `Bearer` para suas chamadas à API. Os cookies da API são `HttpOnly` e tornam-se `Secure` automaticamente quando `NODE_ENV=production`.

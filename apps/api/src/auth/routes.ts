@@ -88,7 +88,7 @@ export async function authRoutes(app: FastifyInstance) {
     reply.setCookie(COOKIE_NAME, accessToken, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
 
@@ -323,7 +323,7 @@ export async function authRoutes(app: FastifyInstance) {
     reply.setCookie(COOKIE_NAME, accessToken, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
 

@@ -21,7 +21,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
-    "db:migrate": "npm run prisma:migrate --workspace=@rotinapp/api",
+    "db:migrate": "node --env-file=.env apps/api/node_modules/prisma/build/index.js migrate dev --name init --schema apps/api/prisma/schema.prisma",
     "db:seed": "npm run prisma:seed --workspace=@rotinapp/api"
   }
 }

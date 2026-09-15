@@ -10,9 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "eslint src --max-warnings=0",
-    "prisma:generate": "node --env-file=../../.env node_modules/prisma/build/index.js generate",
-    "prisma:migrate": "node --env-file=../../.env node_modules/prisma/build/index.js migrate dev --name init",
-    "prisma:studio": "node --env-file=../../.env node_modules/prisma/build/index.js studio",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts"
   },
   "prisma": {
